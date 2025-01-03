@@ -1,0 +1,5 @@
+- name: "NFS"
+  hosts: "{{ hosts_group | default('all') ~ ':!localhost' }}"
+  roles:
+    - role: nfs_server
+      when: nfs_server_shares is defined and nfs_server_shares | length > 0

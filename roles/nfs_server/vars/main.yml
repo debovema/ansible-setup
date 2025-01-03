@@ -1,0 +1,12 @@
+---
+# Default fallback values for anonuid and anongid
+nfs_server_default_anonuid: 65534  # nfsnobody user UID
+nfs_server_default_anongid: 65534  # nfsnobody group GID
+
+nfs_server_client_details: >-
+  {%- for share in nfs_server_shares -%}
+  {%- for client in share.clients -%}
+  {{ client.ip }}(rw,sync,anonuid={{ client.anonuid | default(nfs_server_default_anonuid) }},
+  anongid={{ client.anongid | default(nfs_server_default_anongid) }})
+  {%- endfor -%}
+  {%- endfor -%}

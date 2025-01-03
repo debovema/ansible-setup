@@ -1,0 +1,41 @@
+---
+- name: Ensure NFS packages are installed
+  ansible.builtin.package:
+    name: "{{ 'nfs-utils' if ansible_facts['os_family'] == 'RedHat' else 'nfs-kernel-server' }}"
+    state: present
+
+- name: Create shared directories with correct ownership
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.client.uid | default(1000) }}"
+    group: "{{ item.client.gid | default(1000) }}"
+    mode: '0775'
+  loop: "{{ nfs_server_shares }}"
+  loop_control:
+    loop_var: item
+  notify:
+    - Restart NFS server
+
+- name: Configure /etc/exports for the shared directories
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    regexp: "^{{ item.path }}\\s"
+    line: "{{ item.path }} {{ item.client.ip }}({{ item.client.options | join(',') }})"
+    state: present
+  loop: "{{ nfs_server_shares }}"
+  loop_control:
+    loop_var: item
+  notify:
+    - Restart NFS server
+
+- name: Export NFS shares
+  ansible.builtin.command: exportfs -ra
+  notify:
+    - Restart NFS server
+
+- name: Ensure NFS service is started and enabled
+  ansible.builtin.service:
+    name: "{{ 'nfs-server' if ansible_facts['os_family'] == 'RedHat' else 'nfs-kernel-server' }}"
+    state: started
+    enabled: true
